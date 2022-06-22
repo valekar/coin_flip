@@ -49,6 +49,13 @@ describe("coin-flip", () => {
     tx.add(instruction);
     const result = await program.provider.sendAndConfirm!(tx, signers);
 
+    const poolData = await program.account.pool.fetch(pool);
+
+    console.log(poolData);
+
+    const bal = await program.provider.connection.getBalance(pool);
+    console.log(+bal.toString() / LAMPORTS_PER_SOL);
+
     console.log("Your transaction signature", result);
   });
 });
