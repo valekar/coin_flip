@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{
     clock,
-    program::{invoke, invoke_signed},
+    program::invoke,
     system_instruction,
 };
 use std::mem::size_of;
