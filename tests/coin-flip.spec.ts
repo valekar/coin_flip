@@ -1,9 +1,14 @@
 import * as anchor from "@project-serum/anchor";
 import { Program } from "@project-serum/anchor";
 import { CoinFlip } from "../target/types/coin_flip";
-import { PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
-import { addSols, findAssociatedAddressForKey } from "./utils";
+import { PublicKey, LAMPORTS_PER_SOL, SystemProgram } from "@solana/web3.js";
+import {
+  addSols,
+  findAssociatedAddressForKey,
+  getCoinFlipAddress,
+} from "./utils";
 import { BN } from "bn.js";
+import { assert } from "chai";
 
 describe("coin-flip", () => {
   const provider = anchor.AnchorProvider.env();
@@ -11,51 +16,128 @@ describe("coin-flip", () => {
   anchor.setProvider(provider);
 
   const program = anchor.workspace.CoinFlip as Program<CoinFlip>;
-  const wallet = anchor.web3.Keypair.generate();
+  const treasury = anchor.web3.Keypair.generate();
+  const player = anchor.web3.Keypair.generate();
 
   before("Initialize accounts", async () => {
-    await addSols(provider, wallet.publicKey, 120 * LAMPORTS_PER_SOL);
+    await addSols(provider, treasury.publicKey, 120 * LAMPORTS_PER_SOL);
+    await addSols(provider, player.publicKey, 2 * LAMPORTS_PER_SOL);
   });
 
-  it("Is initialized!", async () => {
-    const [coinFlip, _] = await anchor.web3.PublicKey.findProgramAddress(
-      [Buffer.from("coin-flip")],
-      program.programId
-    );
+  it("Is initialized with balance!", async () => {
+    const [coinFlip, _1] = await getCoinFlipAddress(program);
 
-    const [pool, _1] = await PublicKey.findProgramAddress(
-      [Buffer.from("pool"), coinFlip.toBuffer()],
-      program.programId
-    );
-
-    const amount = new BN(100 * LAMPORTS_PER_SOL);
+    const amount = new BN(110 * LAMPORTS_PER_SOL);
 
     // Add your test here.
     const instruction = await program.methods
       .initializeCoinFlip({
         amount: amount,
+        minimumTokens: new BN(1 * LAMPORTS_PER_SOL),
       })
       .accounts({
-        pool: pool,
         coinFlip: coinFlip,
-        authority: wallet.publicKey,
-        systemProgram: anchor.web3.SystemProgram.programId,
+        authority: treasury.publicKey,
+        systemProgram: SystemProgram.programId,
       })
       .instruction();
 
-    const signers = [wallet];
+    const signers = [treasury];
 
     const tx = new anchor.web3.Transaction();
     tx.add(instruction);
     const result = await program.provider.sendAndConfirm!(tx, signers);
 
-    const poolData = await program.account.pool.fetch(pool);
+    const bal = await program.provider.connection.getBalance(coinFlip);
+    const solBalance = +bal.toString() / LAMPORTS_PER_SOL;
 
-    console.log(poolData);
-
-    const bal = await program.provider.connection.getBalance(pool);
-    console.log(+bal.toString() / LAMPORTS_PER_SOL);
+    assert.isOk(solBalance > 110, "Balance should be greater than 110");
 
     console.log("Your transaction signature", result);
   });
+
+  it("Bet head", async () => {
+    const [coinFlip, _1] = await getCoinFlipAddress(program);
+
+    const amount = new BN(1 * LAMPORTS_PER_SOL);
+
+    const instruction = await program.methods
+      .bet({
+        amount: amount,
+        betType: { head: {} },
+      })
+      .accounts({
+        coinFlip: coinFlip,
+        payer: player.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+
+    const signers = [player];
+
+    const tx = new anchor.web3.Transaction();
+    tx.add(instruction);
+
+    try {
+      const result = await program.provider.sendAndConfirm!(tx, signers);
+
+      const bal = await program.provider.connection.getBalance(
+        player.publicKey
+      );
+      const solBalance = +bal.toString() / LAMPORTS_PER_SOL;
+
+      console.log(solBalance);
+    } catch (err) {
+      console.log(err);
+    }
+  });
+
+  it("Bet tail", async () => {
+    const [coinFlip, _1] = await getCoinFlipAddress(program);
+
+    const amount = new BN(1 * LAMPORTS_PER_SOL);
+
+    const instruction = await program.methods
+      .bet({
+        amount: amount,
+        betType: { tail: {} },
+      })
+      .accounts({
+        coinFlip: coinFlip,
+        payer: player.publicKey,
+        systemProgram: SystemProgram.programId,
+      })
+      .instruction();
+
+    const signers = [player];
+
+    const tx = new anchor.web3.Transaction();
+    tx.add(instruction);
+
+    try {
+      const result = await program.provider.sendAndConfirm!(tx, signers);
+
+      const playerBal = await program.provider.connection.getBalance(
+        player.publicKey
+      );
+      const playerBalance = +playerBal.toString() / LAMPORTS_PER_SOL;
+
+      console.log(playerBalance);
+
+      const treasuryBal = await program.provider.connection.getBalance(
+        treasury.publicKey
+      );
+
+      const treasuryBalance = +treasuryBal.toString() / LAMPORTS_PER_SOL;
+
+      console.log(treasuryBalance);
+    } catch (err) {
+      console.log(err);
+    }
+  });
 });
+
+enum BetType {
+  Head,
+  Tail,
+}

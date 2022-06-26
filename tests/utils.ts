@@ -1,4 +1,4 @@
-import { Provider } from "@project-serum/anchor";
+import { Program, Provider } from "@project-serum/anchor";
 import { PublicKey } from "@solana/web3.js";
 import * as anchor from "@project-serum/anchor";
 
@@ -31,5 +31,12 @@ export const addSols = async (
   await provider.connection.confirmTransaction(
     await provider.connection.requestAirdrop(wallet, amount),
     "confirmed"
+  );
+};
+
+export const getCoinFlipAddress = async (program: Program<any>) => {
+  return await anchor.web3.PublicKey.findProgramAddress(
+    [Buffer.from("coin-flip")],
+    program.programId
   );
 };
