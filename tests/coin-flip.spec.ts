@@ -61,10 +61,12 @@ describe("coin-flip", () => {
 
     const amount = new BN(1 * LAMPORTS_PER_SOL);
 
+    const value: BetType = { head: {} };
+
     const instruction = await program.methods
       .bet({
         amount: amount,
-        betType: { head: {} },
+        betType: value,
       })
       .accounts({
         coinFlip: coinFlip,
@@ -97,10 +99,11 @@ describe("coin-flip", () => {
 
     const amount = new BN(1 * LAMPORTS_PER_SOL);
 
+    const value: BetType = { tail: {} };
     const instruction = await program.methods
       .bet({
         amount: amount,
-        betType: { tail: {} },
+        betType: value,
       })
       .accounts({
         coinFlip: coinFlip,
@@ -137,7 +140,7 @@ describe("coin-flip", () => {
   });
 });
 
-enum BetType {
-  Head,
-  Tail,
-}
+type BetType = {
+  head?: {};
+  tail?: {};
+};
