@@ -10,5 +10,9 @@ url = "https://anchor.projectserum.com"
 cluster = "localnet"
 wallet = "/Users/srinivasvalekar/.config/solana/id.json"
 
+# [provider]
+# cluster = "http://localhost:8899"
+# wallet = "/Users/srinivasvalekar/.config/solana/id.json"
+
 [scripts]
 test = "yarn run ts-mocha -p ./tsconfig.json -t 1000000 tests/**/*.ts"

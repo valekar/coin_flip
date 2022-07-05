@@ -1,9 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{
-    clock,
-    program::invoke,
-    system_instruction,
-};
+use anchor_lang::solana_program::{clock, program::invoke, system_instruction};
 use std::mem::size_of;
 
 declare_id!("J4hq2CKn2rasEXda9JBFgzZcWxw6rAjWPTiYc8nW5SFC");
@@ -69,9 +65,28 @@ pub mod coin_flip {
 
         if clock.unix_timestamp % 2 == 0 && args.bet_type == BetType::Head {
             ctx.accounts.distribute_money(args.amount)?;
-
+            emit!(CoinFlipEvent {
+                message : String::from("Congratulations you've won!"),
+                status :String::from("OK")
+            })
+        } else if clock.unix_timestamp % 2 == 0 && args.bet_type == BetType::Tail {
+            msg!("Sorry, you have lost");
+            emit!(CoinFlipEvent {
+                message : String::from("Sorry you've lost"),
+                status :String::from("OK")
+            })
         } else if clock.unix_timestamp % 2 != 0 && args.bet_type == BetType::Tail {
             ctx.accounts.distribute_money(args.amount)?;
+            emit!(CoinFlipEvent {
+                message : String::from("Congratulations you've won!"),
+                status :String::from("OK")
+            })
+        } else if clock.unix_timestamp % 2 != 0 && args.bet_type == BetType::Head {
+            msg!("Sorry, you have lost");
+            emit!(CoinFlipEvent {
+                message : String::from("Sorry you've lost"),
+                status :String::from("OK")
+            })
         }
 
         Ok(())
@@ -176,4 +191,12 @@ impl<'info> Bet<'info> {
 
         Ok(())
     }
+}
+
+
+
+#[event]
+pub struct CoinFlipEvent {
+    pub status: String,
+    pub message: String,
 }
