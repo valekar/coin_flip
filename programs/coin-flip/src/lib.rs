@@ -1,10 +1,5 @@
 use anchor_lang::prelude::*;
-use anchor_lang::solana_program::{
-    clock,
-    program::{invoke, invoke_signed},
-    system_instruction,
-};
-use std::io::Write;
+use anchor_lang::solana_program::{clock, program::invoke, system_instruction};
 use std::mem::size_of;
 declare_id!("J4hq2CKn2rasEXda9JBFgzZcWxw6rAjWPTiYc8nW5SFC");
 
@@ -67,38 +62,41 @@ pub mod coin_flip {
         // // now play
         let clock = clock::Clock::get().unwrap();
 
+        let claimant_bump = *ctx.bumps.get("claimant").unwrap();
+        let claimant = &mut ctx.accounts.claimant;
+        claimant.amount = args.amount;
+        claimant.claimant_bump = claimant_bump;
+        claimant.claimant = claimant.key();
+
         // heads win case
         if clock.unix_timestamp % 2 == 0 && args.bet_type == BetType::Head {
-            //ctx.accounts.distribute_money(args.amount)?;
+            claimant.success = true;
+            ctx.accounts.distribute_money(args.amount)?;
 
-            ctx.accounts
-                .create_claimant(args.amount, args.claimant_bump)?;
-
-            {
-                ctx.accounts.distribute_money(args.amount)?;
-            }
             emit!(CoinFlipEvent {
                 message: String::from("Congratulations you've won!"),
                 status: String::from("OK")
             })
         } else if clock.unix_timestamp % 2 == 0 && args.bet_type == BetType::Tail {
+            claimant.success = false;
             msg!("Sorry, you have lost");
             emit!(CoinFlipEvent {
                 message: String::from("Sorry you've lost"),
                 status: String::from("OK")
             })
-        // tails win case
+
+            // tails win case
         } else if clock.unix_timestamp % 2 != 0 && args.bet_type == BetType::Tail {
-            ctx.accounts
-                .create_claimant(args.amount, args.claimant_bump)?;
-            {
-                ctx.accounts.distribute_money(args.amount)?;
-            }
+            claimant.success = true;
+            ctx.accounts.distribute_money(args.amount)?;
+
             emit!(CoinFlipEvent {
                 message: String::from("Congratulations you've won!"),
                 status: String::from("OK")
             })
         } else if clock.unix_timestamp % 2 != 0 && args.bet_type == BetType::Head {
+            claimant.success = false;
+
             msg!("Sorry, you have lost");
             emit!(CoinFlipEvent {
                 message: String::from("Sorry you've lost"),
@@ -109,7 +107,7 @@ pub mod coin_flip {
         Ok(())
     }
 
-    pub fn claim_prize(ctx: Context<ClaimPrize>, args: ClaimPrizeArgs) -> Result<()> {
+    pub fn claim(ctx: Context<Claim>, _args: ClaimArgs) -> Result<()> {
         let (claimant, _) = Pubkey::find_program_address(
             &[
                 b"claimant".as_ref(),
@@ -122,15 +120,11 @@ pub mod coin_flip {
             ctx.accounts.claimant.key() == claimant,
             CoinFlipErrorCode::OwnerMismatch
         );
-
-        **ctx.accounts.payer.try_borrow_mut_lamports()? +=
-            ctx.accounts.claimant.to_account_info().lamports();
-        **ctx.accounts.claimant.try_borrow_mut_lamports()? = 0;
-
         Ok(())
     }
 }
 
+// ACCOUNTS
 #[derive(Accounts)]
 pub struct InitializeCoinFlip<'info> {
     #[account(
@@ -158,15 +152,17 @@ pub struct Bet<'info> {
     )]
     pub coin_flip: Account<'info, CoinFlip>,
 
-    /// CHECK:
     #[account(
-        mut,
+        init,
         seeds = [
             b"claimant".as_ref(), 
             payer.key().as_ref()
         ],
-        bump = args.claimant_bump)]
-    pub claimant: AccountInfo<'info>,
+        bump,
+        space = 8 + size_of::<Claimant>(),
+        payer = payer
+    )]
+    pub claimant: Account<'info, Claimant>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -175,17 +171,17 @@ pub struct Bet<'info> {
 }
 
 #[derive(Accounts)]
-#[instruction(args : ClaimPrizeArgs)]
-pub struct ClaimPrize<'info> {
-    /// CHECK:
+pub struct Claim<'info> {
     #[account(
         mut,
         seeds = [
             b"claimant".as_ref(), 
             payer.key().as_ref()
         ],
-        bump = args.claimant_bump)]
-    pub claimant: AccountInfo<'info>,
+        bump = claimant.claimant_bump,
+        close = payer
+    )]
+    pub claimant: Account<'info, Claimant>,
 
     #[account(mut)]
     pub payer: Signer<'info>,
@@ -193,56 +189,7 @@ pub struct ClaimPrize<'info> {
     pub system_program: Program<'info, System>,
 }
 
-#[account]
-#[derive(Default)]
-pub struct CoinFlipArgs {
-    amount: u64,
-    minimum_tokens: u64,
-}
-
-#[account]
-pub struct BetArgs {
-    amount: u64,
-    bet_type: BetType,
-    claimant_bump: u8,
-}
-
-#[account]
-pub struct ClaimPrizeArgs {
-    claimant_bump: u8,
-}
-
-#[account]
-#[derive(Default)]
-pub struct CoinFlip {
-    authority: Pubkey,
-    bump: u8,
-    minimum_tokens: u64,
-}
-
-#[account]
-#[derive(Default)]
-pub struct Claimant {
-    success: bool,
-    amount: u64,
-    bump: u8,
-    claimant: Pubkey,
-}
-
-#[error_code]
-pub enum CoinFlipErrorCode {
-    #[msg("Amount must be greater than zero.")]
-    AmountMustBeGreaterThanZero,
-    #[msg("Owner mismatch")]
-    OwnerMismatch,
-}
-
-#[derive(AnchorDeserialize, AnchorSerialize, Clone, PartialEq)]
-pub enum BetType {
-    Head,
-    Tail,
-}
-
+// IMPLEMENTATIONS
 impl<'info> Bet<'info> {
     pub fn transfer_minimum_money_to_winners(&mut self) -> Result<()> {
         let winner = self.claimant.to_account_info();
@@ -256,70 +203,9 @@ impl<'info> Bet<'info> {
 
     pub fn transfer_money_to_winners(&mut self, amount: u64) -> Result<()> {
         let winner = self.claimant.to_account_info();
-        **winner.try_borrow_mut_lamports()? += amount;
+        **winner.try_borrow_mut_lamports()? += 2 * amount;
         **self.coin_flip.to_account_info().try_borrow_mut_lamports()? =
-            self.coin_flip.to_account_info().lamports() - amount;
-        Ok(())
-    }
-
-    pub fn create_claimant(&mut self, amount: u64, claimant_bump: u8) -> Result<()> {
-        let claimant_state = self.claimant.lamports() == 0;
-
-        let rent = &Rent::get()?;
-        let space = 8 + Claimant::default().try_to_vec().unwrap().len();
-        if claimant_state {
-            let payer_key = self.payer.key();
-            let seeds = &[
-                b"claimant" as &[u8],
-                &payer_key.to_bytes(),
-                &[claimant_bump],
-            ];
-            let claimer_signer_seeds = &[&seeds[..]];
-            let lamports = rent.minimum_balance(space);
-
-            invoke_signed(
-                &system_instruction::create_account(
-                    &payer_key,
-                    &self.claimant.key(),
-                    lamports,
-                    space as u64,
-                    &ID,
-                ),
-                &[
-                    self.payer.to_account_info().clone(),
-                    self.claimant.to_account_info().clone(),
-                    self.system_program.to_account_info().clone(),
-                ],
-                claimer_signer_seeds,
-            )?;
-
-            let mut data = self.claimant.try_borrow_mut_data()?;
-            let dst: &mut [u8] = &mut data;
-            let mut cursor = std::io::Cursor::new(dst);
-            let buffer = &<Claimant as anchor_lang::Discriminator>::discriminator();
-            cursor.write_all(buffer).unwrap();
-
-            msg!("New claimant account created at {}", self.claimant.key());
-        }
-
-        require!(
-            *self.claimant.to_account_info().owner == ID,
-            CoinFlipErrorCode::OwnerMismatch
-        );
-
-        let mut claimant_account_state: Account<Claimant> = Account::try_from(&self.claimant)?;
-
-        {
-            // first time initialization
-
-            claimant_account_state.bump = claimant_bump;
-            claimant_account_state.claimant = self.payer.key();
-            claimant_account_state.success = true;
-            claimant_account_state.amount = amount;
-            let mut claimant_data: &mut [u8] = &mut self.claimant.try_borrow_mut_data()?;
-            claimant_account_state.try_serialize(&mut claimant_data)?;
-        }
-
+            self.coin_flip.to_account_info().lamports() - 2 * amount;
         Ok(())
     }
 
@@ -338,8 +224,59 @@ impl<'info> Bet<'info> {
     }
 }
 
+// STATE
+#[account]
+#[derive(Default)]
+pub struct CoinFlip {
+    authority: Pubkey,
+    bump: u8,
+    minimum_tokens: u64,
+}
+
+#[derive(Default)]
+#[account]
+pub struct Claimant {
+    success: bool,
+    amount: u64,
+    claimant_bump: u8,
+    claimant: Pubkey,
+}
+
+// ERROR
+#[error_code]
+pub enum CoinFlipErrorCode {
+    #[msg("Amount must be greater than zero.")]
+    AmountMustBeGreaterThanZero,
+    #[msg("Owner mismatch")]
+    OwnerMismatch,
+}
+
+// EVENTS
 #[event]
 pub struct CoinFlipEvent {
     pub status: String,
     pub message: String,
+}
+
+// ARGS
+#[account]
+#[derive(Default)]
+pub struct CoinFlipArgs {
+    amount: u64,
+    minimum_tokens: u64,
+}
+
+#[account]
+pub struct BetArgs {
+    amount: u64,
+    bet_type: BetType,
+}
+
+#[account]
+pub struct ClaimArgs {}
+
+#[derive(AnchorDeserialize, AnchorSerialize, Clone, PartialEq)]
+pub enum BetType {
+    Head,
+    Tail,
 }
