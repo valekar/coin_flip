@@ -40,3 +40,13 @@ export const getCoinFlipAddress = async (program: Program<any>) => {
     program.programId
   );
 };
+
+export const getClaimantAddress = async (
+  program: Program<any>,
+  payer: PublicKey
+) => {
+  return await anchor.web3.PublicKey.findProgramAddress(
+    [Buffer.from("claimant"), payer.toBuffer()],
+    program.programId
+  );
+};

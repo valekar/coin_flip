@@ -5,6 +5,7 @@ import { PublicKey, LAMPORTS_PER_SOL, SystemProgram } from "@solana/web3.js";
 import {
   addSols,
   findAssociatedAddressForKey,
+  getClaimantAddress,
   getCoinFlipAddress,
 } from "./utils";
 import { BN } from "bn.js";
@@ -57,7 +58,14 @@ describe("coin-flip", () => {
   });
 
   it("Bet head", async () => {
+    await addSols(provider, player.publicKey, 2 * LAMPORTS_PER_SOL);
+
     const [coinFlip, _1] = await getCoinFlipAddress(program);
+
+    const [claimant, claimantBump] = await getClaimantAddress(
+      program,
+      player.publicKey
+    );
 
     const amount = new BN(1 * LAMPORTS_PER_SOL);
 
@@ -67,9 +75,11 @@ describe("coin-flip", () => {
       .bet({
         amount: amount,
         betType: value,
+        claimantBump: claimantBump,
       })
       .accounts({
         coinFlip: coinFlip,
+        claimant: claimant,
         payer: player.publicKey,
         systemProgram: SystemProgram.programId,
       })
@@ -88,14 +98,49 @@ describe("coin-flip", () => {
       );
       const solBalance = +bal.toString() / LAMPORTS_PER_SOL;
 
-      console.log(solBalance);
+      //console.log(solBalance);
     } catch (err) {
       console.log(err);
+    }
+
+    try {
+      const result = await program.account.claimant.fetch(claimant);
+
+      console.log(result);
+      if (result.success) {
+        const instruction = await program.methods
+          .claimPrize({
+            claimantBump: claimantBump,
+          })
+          .accounts({
+            claimant: claimant,
+            payer: player.publicKey,
+            systemProgram: SystemProgram.programId,
+          })
+          .instruction();
+
+        const signers = [player];
+
+        const tx = new anchor.web3.Transaction();
+        tx.add(instruction);
+        await program.provider.sendAndConfirm!(tx, signers);
+        console.log("You've won!");
+        //console.log(result2);
+      }
+    } catch (err) {
+      console.log("sorry you have lost");
     }
   });
 
   it("Bet tail", async () => {
+    await addSols(provider, player.publicKey, 3 * LAMPORTS_PER_SOL);
+
     const [coinFlip, _1] = await getCoinFlipAddress(program);
+
+    const [claimant, claimantBump] = await getClaimantAddress(
+      program,
+      player.publicKey
+    );
 
     const amount = new BN(1 * LAMPORTS_PER_SOL);
 
@@ -104,9 +149,11 @@ describe("coin-flip", () => {
       .bet({
         amount: amount,
         betType: value,
+        claimantBump: claimantBump,
       })
       .accounts({
         coinFlip: coinFlip,
+        claimant: claimant,
         payer: player.publicKey,
         systemProgram: SystemProgram.programId,
       })
@@ -125,7 +172,7 @@ describe("coin-flip", () => {
       );
       const playerBalance = +playerBal.toString() / LAMPORTS_PER_SOL;
 
-      console.log(playerBalance);
+      //console.log(playerBalance);
 
       const treasuryBal = await program.provider.connection.getBalance(
         treasury.publicKey
@@ -133,9 +180,37 @@ describe("coin-flip", () => {
 
       const treasuryBalance = +treasuryBal.toString() / LAMPORTS_PER_SOL;
 
-      console.log(treasuryBalance);
+      //console.log(treasuryBalance);
     } catch (err) {
       console.log(err);
+    }
+
+    try {
+      const result = await program.account.claimant.fetch(claimant);
+
+      console.log(result);
+      if (result.success) {
+        const instruction = await program.methods
+          .claimPrize({
+            claimantBump: claimantBump,
+          })
+          .accounts({
+            claimant: claimant,
+            payer: player.publicKey,
+            systemProgram: SystemProgram.programId,
+          })
+          .instruction();
+
+        const signers = [player];
+
+        const tx = new anchor.web3.Transaction();
+        tx.add(instruction);
+        await program.provider.sendAndConfirm!(tx, signers);
+        console.log("You've won!");
+        //console.log(result2);
+      }
+    } catch (err) {
+      console.log("sorry you have lost");
     }
   });
 });
