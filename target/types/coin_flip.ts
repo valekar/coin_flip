@@ -1,0 +1,455 @@
+export type CoinFlip = {
+  "version": "0.1.0",
+  "name": "coin_flip",
+  "instructions": [
+    {
+      "name": "initializeCoinFlip",
+      "accounts": [
+        {
+          "name": "coinFlip",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": "CoinFlipArgs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "bet",
+      "accounts": [
+        {
+          "name": "coinFlip",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "claimant",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": "BetArgs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "claim",
+      "accounts": [
+        {
+          "name": "claimant",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": "ClaimArgs"
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "coinFlip",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "minimumTokens",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "claimant",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "success",
+            "type": "bool"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "claimantBump",
+            "type": "u8"
+          },
+          {
+            "name": "claimant",
+            "type": "publicKey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "coinFlipArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "minimumTokens",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "betArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "betType",
+            "type": {
+              "defined": "BetType"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "claimArgs",
+      "type": {
+        "kind": "struct",
+        "fields": []
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "BetType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Head"
+          },
+          {
+            "name": "Tail"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "CoinFlipEvent",
+      "fields": [
+        {
+          "name": "status",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "index": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "AmountMustBeGreaterThanZero",
+      "msg": "Amount must be greater than zero."
+    },
+    {
+      "code": 6001,
+      "name": "OwnerMismatch",
+      "msg": "Owner mismatch"
+    }
+  ]
+};
+
+export const IDL: CoinFlip = {
+  "version": "0.1.0",
+  "name": "coin_flip",
+  "instructions": [
+    {
+      "name": "initializeCoinFlip",
+      "accounts": [
+        {
+          "name": "coinFlip",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "authority",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": "CoinFlipArgs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "bet",
+      "accounts": [
+        {
+          "name": "coinFlip",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "claimant",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": "BetArgs"
+          }
+        }
+      ]
+    },
+    {
+      "name": "claim",
+      "accounts": [
+        {
+          "name": "claimant",
+          "isMut": true,
+          "isSigner": false
+        },
+        {
+          "name": "payer",
+          "isMut": true,
+          "isSigner": true
+        },
+        {
+          "name": "systemProgram",
+          "isMut": false,
+          "isSigner": false
+        }
+      ],
+      "args": [
+        {
+          "name": "args",
+          "type": {
+            "defined": "ClaimArgs"
+          }
+        }
+      ]
+    }
+  ],
+  "accounts": [
+    {
+      "name": "coinFlip",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "authority",
+            "type": "publicKey"
+          },
+          {
+            "name": "bump",
+            "type": "u8"
+          },
+          {
+            "name": "minimumTokens",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "claimant",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "success",
+            "type": "bool"
+          },
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "claimantBump",
+            "type": "u8"
+          },
+          {
+            "name": "claimant",
+            "type": "publicKey"
+          }
+        ]
+      }
+    },
+    {
+      "name": "coinFlipArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "minimumTokens",
+            "type": "u64"
+          }
+        ]
+      }
+    },
+    {
+      "name": "betArgs",
+      "type": {
+        "kind": "struct",
+        "fields": [
+          {
+            "name": "amount",
+            "type": "u64"
+          },
+          {
+            "name": "betType",
+            "type": {
+              "defined": "BetType"
+            }
+          }
+        ]
+      }
+    },
+    {
+      "name": "claimArgs",
+      "type": {
+        "kind": "struct",
+        "fields": []
+      }
+    }
+  ],
+  "types": [
+    {
+      "name": "BetType",
+      "type": {
+        "kind": "enum",
+        "variants": [
+          {
+            "name": "Head"
+          },
+          {
+            "name": "Tail"
+          }
+        ]
+      }
+    }
+  ],
+  "events": [
+    {
+      "name": "CoinFlipEvent",
+      "fields": [
+        {
+          "name": "status",
+          "type": "string",
+          "index": false
+        },
+        {
+          "name": "message",
+          "type": "string",
+          "index": false
+        }
+      ]
+    }
+  ],
+  "errors": [
+    {
+      "code": 6000,
+      "name": "AmountMustBeGreaterThanZero",
+      "msg": "Amount must be greater than zero."
+    },
+    {
+      "code": 6001,
+      "name": "OwnerMismatch",
+      "msg": "Owner mismatch"
+    }
+  ]
+};
