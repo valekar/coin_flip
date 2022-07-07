@@ -1,7 +1,7 @@
 use anchor_lang::prelude::*;
 use anchor_lang::solana_program::{clock, program::invoke, system_instruction};
 use std::mem::size_of;
-declare_id!("J4hq2CKn2rasEXda9JBFgzZcWxw6rAjWPTiYc8nW5SFC");
+declare_id!("4DGK6QrK9gQHMxrWbfAffGsuVztMZ2KqMGw66UaWRuGZ");
 
 #[program]
 pub mod coin_flip {
@@ -153,14 +153,15 @@ pub struct Bet<'info> {
     pub coin_flip: Account<'info, CoinFlip>,
 
     #[account(
-        init,
+        init_if_needed,
         seeds = [
             b"claimant".as_ref(), 
             payer.key().as_ref()
         ],
         bump,
         space = 8 + size_of::<Claimant>(),
-        payer = payer
+        payer = payer,
+        constraint = payer.is_signer
     )]
     pub claimant: Account<'info, Claimant>,
 

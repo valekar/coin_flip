@@ -73,6 +73,20 @@ describe("coin-flip", () => {
       );
 
       await claim(program, claimant, player);
+
+      const instruction1 = await getBetInstruction(program, player, {
+        tail: {},
+      });
+      const tx1 = new anchor.web3.Transaction();
+      tx1.add(instruction1);
+      const signers1 = [player];
+      await program.provider.sendAndConfirm!(tx, signers1);
+
+      const [claimant1, _3] = await getClaimantAddress(
+        program,
+        player.publicKey
+      );
+      await claim(program, claimant1, player);
     } catch (err) {
       console.log(err);
     }
